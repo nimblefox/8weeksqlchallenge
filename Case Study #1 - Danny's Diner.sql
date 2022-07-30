@@ -57,11 +57,44 @@ VALUES
 /*--------------------------------------------------------------------*/
  # Q1 What is the total amount each customer spent at the restaurant?
  
-SELECT customer_id, sum(price)
+select customer_id, sum(price)
 from dannys_diner.sales as s
 left join dannys_diner.menu as m
 on s.product_id = m.product_id
 group by customer_id;
 
 /*--------------------------------------------------------------------*/
-# Q2 
+# Q2 How many days has each customer visited the restaurant?
+
+select customer_id, count(distinct(order_date)) days
+from dannys_diner.sales 
+group by customer_id
+
+/*-------------------------------------------------------------------*/
+# Q3 What was the first item from the menu purchased by each customer?
+
+WITH new_table AS (
+
+SELECT 
+	customer_id, 
+	order_date, 
+	product_name,
+    row_number() OVER(PARTITION BY s.customer_id ORDER BY s.order_date) AS seq
+FROM 
+  dannys_diner.sales as s
+LEFT JOIN 
+  dannys_diner.menu as d
+ON 
+  s.product_id = d.product_id
+)
+
+SELECT 
+	customer_id, 
+    product_name
+FROM 
+	new_table
+WHERE 
+	seq = 1
+  
+# -------------------------------------------------------
+# Q4 
