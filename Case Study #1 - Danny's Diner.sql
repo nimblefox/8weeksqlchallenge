@@ -55,31 +55,40 @@ VALUES
   ('B', '2021-01-09');
   
 /*--------------------------------------------------------------------*/
- # Q1 What is the total amount each customer spent at the restaurant?
+ -- Q1 What is the total amount each customer spent at the restaurant?
  
-select customer_id, sum(price)
-from dannys_diner.sales as s
-left join dannys_diner.menu as m
-on s.product_id = m.product_id
-group by customer_id;
+select 
+  customer_id,
+  sum(price)
+from 
+  dannys_diner.sales as s
+left join 
+  dannys_diner.menu as m
+on 
+  s.product_id = m.product_id
+group by 
+  customer_id;
 
 /*--------------------------------------------------------------------*/
-# Q2 How many days has each customer visited the restaurant?
+-- Q2 How many days has each customer visited the restaurant?
 
-select customer_id, count(distinct(order_date)) days
-from dannys_diner.sales 
-group by customer_id
+select 
+  customer_id,
+  count(distinct(order_date)) as days
+from 
+  dannys_diner.sales 
+group by 
+  customer_id
 
 /*-------------------------------------------------------------------*/
-# Q3 What was the first item from the menu purchased by each customer?
+-- Q3 What was the first item from the menu purchased by each customer?
 
 WITH new_table AS (
-
 SELECT 
-	customer_id, 
-	order_date, 
-	product_name,
-    row_number() OVER(PARTITION BY s.customer_id ORDER BY s.order_date) AS seq
+  customer_id, 
+  order_date, 
+  product_name,
+  row_number() OVER(PARTITION BY s.customer_id ORDER BY s.order_date) AS seq
 FROM 
   dannys_diner.sales as s
 LEFT JOIN 
@@ -89,12 +98,196 @@ ON
 )
 
 SELECT 
-	customer_id, 
-    product_name
+  customer_id, 
+  product_name
 FROM 
-	new_table
+  new_table
 WHERE 
-	seq = 1
+  seq = 1
   
-# -------------------------------------------------------
-# Q4 
+-------------------------------------------------------
+-- Q4 What is the most purchased item on the menu and how many times was it purchased by all customers?
+
+SELECT 
+  d.product_name, 
+  count(s.product_id)
+FROM 
+  dannys_diner.sales as s
+LEFT JOIN 
+  dannys_diner.menu as d
+ON 
+  s.product_id = d.product_id
+GROUP BY 
+  d.product_name
+LIMIT 1;
+
+/*------------------------------------------------------*/
+-- Q5 Which item was the most popular for each customer?
+
+WITH temp1 AS (
+SELECT 
+  s.customer_id,
+  d.product_name, 
+  rank() over(partition by s.customer_id order by count(s.product_id) desc) as ranks
+FROM 
+  dannys_diner.sales as s
+LEFT JOIN 
+  dannys_diner.menu as d
+ON 
+  s.product_id = d.product_id
+GROUP BY 
+  s.customer_id, d.product_name )
+
+SELECT * 
+FROM 
+  temp1
+WHERE 
+  ranks = 1
+ORDER BY 
+  customer_id
+ 
+/*--------------------------------------------------------------------*/
+-- Q6 Which item was purchased first by the customer after they became a member?
+ 
+WITH temp1 AS
+(SELECT
+  s.customer_id, 
+  s.order_date, 
+  x.product_name,
+  rank() over(partition by s.customer_id order by s.order_date) as ranks
+FROM
+  dannys_diner.sales as s
+LEFT JOIN
+  dannys_diner.members as d
+ON
+  s.customer_id = d.customer_id
+LEFT JOIN 
+  dannys_diner.menu as x
+ON 
+  s.product_id = x.product_id
+WHERE
+  (s.order_date >= d.join_date))
+
+
+SELECT 
+  customer_id,
+  order_date,
+  product_name
+FROM 
+  temp1
+WHERE
+  ranks = 1
+
+/*--------------------------------------------------------------------*/
+-- Q7. Which item was purchased just before the customer became a member?
+
+WITH temp1 AS
+(SELECT
+  s.customer_id, 
+  s.order_date, 
+  x.product_name,
+  rank() over(partition by s.customer_id order by s.order_date desc) as ranks
+FROM
+  dannys_diner.sales as s
+LEFT JOIN
+  dannys_diner.members as d
+ON
+  s.customer_id = d.customer_id
+LEFT JOIN 
+  dannys_diner.menu as x
+ON 
+  s.product_id = x.product_id
+WHERE
+  (s.order_date < d.join_date))
+
+
+SELECT 
+  customer_id,
+  order_date,
+  product_name
+FROM 
+  temp1
+WHERE
+  ranks = 1
+
+/*--------------------------------------------------------------------*/
+-- Q8. What is the total items and amount spent for each member before they became a member?
+
+-- What is the total items and amount spent for each member before they became a member?
+
+WITH temp1 AS
+(SELECT 
+  s.customer_id,
+  count(s.product_id),
+  sum(x.price)
+FROM
+  dannys_diner.sales as s
+LEFT JOIN 
+  dannys_diner.menu as x
+ON 
+  s.product_id = x.product_id
+LEFT JOIN 
+  dannys_diner.members as d
+ON
+  s.customer_id = d.customer_id
+WHERE 
+  (s.order_date > d.join_date)
+GROUP BY 
+  s.customer_id)
+
+
+SELECT * FROM temp1
+
+/*--------------------------------------------------------------------*/
+-- Q9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
+
+WITH temp2 AS
+(SELECT 
+  s.customer_id,
+  CASE
+      WHEN d.price != 10 THEN d.price
+      WHEN d.price = 10 THEN 2*d.price
+  END Points
+FROM 
+  dannys_diner.sales as s
+LEFT JOIN 
+  dannys_diner.menu as d
+ON 
+  s.product_id = d.product_id)
+
+SELECT 
+  customer_id,
+  sum(points)
+FROM 
+  temp2
+GROUP BY 
+  customer_id
+  
+/*--------------------------------------------------------------------*/
+-- Q9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
+
+WITH temp2 AS
+(SELECT 
+  s.customer_id,
+  CASE
+      WHEN d.price != 10 THEN d.price*10
+      WHEN d.price = 10 THEN 2*d.price*10
+  END Points
+FROM 
+  dannys_diner.sales as s
+LEFT JOIN 
+  dannys_diner.menu as d
+ON 
+  s.product_id = d.product_id)
+
+SELECT 
+  customer_id,
+  sum(points)
+FROM 
+  temp2
+GROUP BY 
+  customer_id
+  
+/*--------------------------------------------------------------------*/
+-- Q10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
+
