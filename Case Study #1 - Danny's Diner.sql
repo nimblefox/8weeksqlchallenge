@@ -291,3 +291,24 @@ GROUP BY
 /*--------------------------------------------------------------------*/
 -- Q10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
+
+/*BONUS*/
+SELECT 
+	s.customer_id
+    s.order_date
+    x.product_name
+    x.price
+ 	CASE 
+    	WHEN s.order_date < d.join_date THEN 'N'
+        WHEN s.order_date >= d.join_date THEN 'Y'
+    END membe
+FROM
+  dannys_diner.sales as s
+LEFT JOIN 
+  dannys_diner.menu as x
+ON 
+  s.product_id = x.product_id
+LEFT JOIN 
+  dannys_diner.members as d
+ON
+  s.customer_id = d.customer_id
