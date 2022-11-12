@@ -1,5 +1,5 @@
 # 8weeksqlchallenge
-These challanges are from [The 8 week SQL challenge](https://8weeksqlchallenge.com/)
+These challenges are from [The 8 week SQL challenge](https://8weeksqlchallenge.com/)
 
 Here is what I have learnt and used:
 
